@@ -1,0 +1,35 @@
+name: sync-balance
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 读取余额
+        env:
+          DC_KEY: ${{ secrets.DC_KEY }}
+          DC_SECRET: ${{ secrets.DC_SECRET }}
+          DC_PASS: ${{ secrets.DC_PASS }}
+          DC_BASE: https://api.deepcoin.com
+          DC_PATH: /deepcoin/account/balance
+        run: node sync.js
+
+      - name: 提交 balance.json
+        run: |
+          git config user.name "balance-bot"
+          git config user.email "balance-bot@users.noreply.github.com"
+          git add balance.json
+          git commit -m "update balance $(date -u +%Y-%m-%dT%H:%M:%SZ)" || echo "无变化"
+          git push
