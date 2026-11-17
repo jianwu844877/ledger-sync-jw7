@@ -1,0 +1,20 @@
+{
+  "total": 0,
+  "currency": "USD",
+  "source": "deepcoin",
+  "updated_at": "2026-11-17T07:00:46.640Z",
+  "path_used": "/deepcoin/account/balances",
+  "attempts": [
+    {
+      "path": "/deepcoin/account/balance",
+      "status": 404,
+      "note": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/balances",
+      "status": 200,
+      "note": ""
+    }
+  ],
+  "http_status": 200
+}
