@@ -35,6 +35,8 @@ async function get(path) {
     let json = null;
 try { json = JSON.parse(text); } catch (e) {}
     return { status: res.status, json, raw: text };
+  } catch (e) {
+    return { status: 0, json: null, raw: '网络失败:' + String(e && e.message) };
   }
 }
 
@@ -66,12 +68,12 @@ async function main() {
     currency: 'USD',
     source: 'deepcoin',
     updated_at: new Date().toISOString(),
-    detail: {},
+detail: {},
   };
 
   if (!KEY || !SECRET) {
     out.error = '缺少 DC_KEY 或 DC_SECRET';
-fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
+    fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
     return;
   }
 
@@ -95,9 +97,10 @@ fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
     const eq = toNum(it.equity), bal = toNum(it.bal);
     if (eq != null) fEquity += eq;
     if (bal != null) fBal += bal;
-  }
+}
   out.detail.funding = { status: fund.status, count: fundList.length, equitySum: Math.round(fEquity * 100) / 100, balSum: Math.round(fBal * 100) / 100 };
-// 3) 持仓里的未实现盈亏（兜底用）
+
+  // 3) 持仓里的未实现盈亏（兜底用）
   const pos = await get('/deepcoin/account/positions?instType=SWAP');
   const posList = listOf(pos.json);
   let pUnreal = 0;
