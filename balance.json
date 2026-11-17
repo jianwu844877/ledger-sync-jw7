@@ -1,60 +1,6 @@
 {
-  "total": 2188.73,
+  "total": 2193.86,
   "currency": "USD",
   "source": "deepcoin",
-  "updated_at": "2026-11-17T07:38:31.022Z",
-  "detail": {
-    "contract": {
-      "status": 200,
-      "count": 1,
-      "keys": {
-        "ccy": "文本",
-        "bal": "数值",
-        "frozenBal": "数值",
-        "availBal": "数值",
-        "unrealizedProfit": "数值",
-        "equity": "数值"
-      }
-    },
-    "funding": {
-      "status": 200,
-      "count": 1,
-      "equitySum": 0,
-      "balSum": 0
-    },
-    "positions": {
-      "status": 200,
-      "count": 8,
-      "unrealSum": -1073.94,
-      "keys": {
-        "instType": "文本",
-        "mgnMode": "文本",
-        "instId": "文本",
-        "posId": "数值",
-        "posSide": "文本",
-        "pos": "数值",
-        "avgPx": "数值",
-        "lever": "数值",
-        "liqPx": "数值",
-        "useMargin": "数值",
-        "unrealizedProfit": "数值",
-        "lastPx": "数值",
-        "tpTriggerPx": "文本",
-        "slTriggerPx": "文本",
-        "mrgPosition": "文本",
-        "isLeading": "boolean",
-        "isFollow": "boolean",
-        "ccy": "文本",
-        "uTime": "数值",
-        "cTime": "数值"
-      }
-    },
-    "candidates": {
-      "A_合约权益求和": 2188.73,
-      "B_合约钱包余额求和": 3262.59,
-      "C_合约权益加资金": 2188.73,
-      "D_合约钱包余额加未实现": 2188.73,
-      "E_合约钱包余额加持仓未实现": 2188.65
-    }
-  }
+  "updated_at": "2026-11-17T07:54:51.579Z"
 }
