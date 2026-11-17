@@ -1,72 +1,206 @@
 {
   "total": null,
-  "currency": "USD",
-  "updated_at": "2026-11-17T07:25:04.426Z",
-  "step": "v6",
-  "balances": {
-    "status": 200,
-    "schema": {
-      "object": {
-        "code": "数值字符串",
-        "msg": "文本",
-        "data": {
-          "array": 1,
-          "item": {
-            "object": {
-              "ccy": "文本",
-              "bal": "数值字符串",
-              "frozenBal": "数值字符串",
-              "availBal": "数值字符串",
-              "unrealizedProfit": "数值字符串",
-              "equity": "数值字符串"
-            }
-          }
-        }
-      }
+  "updated_at": "2026-11-17T07:30:07.739Z",
+  "step": "v7",
+  "probed": [
+    {
+      "path": "/deepcoin/account/balances?instType=SWAP",
+      "status": 200,
+      "len": 173,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/balances?accountType=CONTRACT",
+      "status": 200,
+      "len": 122,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/balances?type=swap",
+      "status": 200,
+      "len": 122,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/balances?ccy=USDT",
+      "status": 200,
+      "len": 122,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/positions?instType=SWAP",
+      "status": 200,
+      "len": 3200,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/positions?productType=USDT-FUTURES",
+      "status": 200,
+      "len": 64,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/positions?type=swap",
+      "status": 200,
+      "len": 64,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/positions?ccy=USDT",
+      "status": 200,
+      "len": 64,
+      "head": "{"
+    },
+    {
+      "path": "/deepcoin/account/balance/contract",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/unified/balance",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/margin/balance",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/swap/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/contract/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/contract/asset",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/futures/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/futures/asset",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/wallet",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/wallets",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/trade/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/trade/balance",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/swap/account",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/swap/balance",
+      "status": 404,
+      "len": 9,
+      "head": "Not Found"
     }
-  },
-  "positions": {
-    "status": 200,
-    "schema": {
-      "object": {
-        "code": "数值字符串",
-        "msg": "文本",
-        "data": "null"
-      }
-    }
-  },
-  "discovery": {
-    "info": [
+  ],
+  "docs": {
+    "log": [
       {
-        "page": "https://www.deepcoin.red/zh/my/dashboard",
+        "url": "https://www.deepcoin.com/docs",
         "status": 200,
-        "bytes": 421122
+        "bytes": 615
       },
       {
-        "page": "https://www.deepcoin.red/",
+        "url": "https://www.deepcoin.com/docs/zh",
         "status": 200,
-        "bytes": 480253
+        "bytes": 7404
+      },
+      {
+        "url": "https://www.deepcoin.com/sitemap.xml",
+        "status": 404,
+        "bytes": 13222
+      },
+      {
+        "url": "https://www.deepcoin.com/docs/zh/quick-start",
+        "status": 200,
+        "bytes": 7404
+      },
+      {
+        "url": "https://www.deepcoin.com/docs/zh/authentication",
+        "status": 200,
+        "bytes": 22024
+      },
+      {
+        "url": "https://www.deepcoin.com/docs/img/favicon.ico",
+        "status": 200,
+        "bytes": 9662
+      },
+      {
+        "url": "s://your-docusaurus-site.example.com/docs/404.html",
+        "status": 0
+      },
+      {
+        "url": "/your-docusaurus-site.example.com/docs/zh/404.html",
+        "status": 0
+      },
+      {
+        "url": "w.deepcoin.com/docs/assets/css/styles.26c3281c.css",
+        "status": 200,
+        "bytes": 76445
+      },
+      {
+        "url": "https://www.deepcoin.com/docs/authentication",
+        "status": 200,
+        "bytes": 24060
       }
     ],
     "hits": [
-      "/zh/my/asset-account",
-      "/zh/my/spot-account",
-      "/zh/my/copy-account/swapU",
-      "/zh/my/subaccount/transfer-history",
-      "/zh/my/subaccount",
-      "/:locale/freePosition",
-      "/:locale/mock-account",
-      "/:locale/my/alpha-account",
-      "/:locale/my/asset-account",
-      "/:locale/my/asset-analysis",
-      "/:locale/my/copy-account/:productType",
-      "/:locale/my/poly-account",
-      "/:locale/my/robot-account",
-      "/:locale/my/spot-account",
-      "/:locale/my/subaccount",
-      "/:locale/my/subaccount/transfer-history",
-      "/:locale/my/swap-account/:productType",
-      "/_next/static/media/asset-markets-journey.09cbd5fab0bf2b6c.mp4"
+      "/deepcoin/account/balance"
     ]
   }
 }
