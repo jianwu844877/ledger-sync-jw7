@@ -1,9 +1,224 @@
 {
-  "total": 0,
+  "total": null,
   "currency": "USD",
   "source": "deepcoin",
-  "updated_at": "2026-11-17T07:11:17.910Z",
-  "path_used": "/deepcoin/account/balances",
-  "http_status": 200,
-  "coin_count": 1
+  "updated_at": "2026-11-17T07:22:17.237Z",
+  "step": "probe",
+  "probed": [
+    {
+      "path": "/deepcoin/account/balances",
+      "status": 200,
+      "head": ""
+    },
+    {
+      "path": "/deepcoin/account/contract/balances",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/futures/balances",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/swap/balances",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/asset",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/assets",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/info",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/positions",
+      "status": 200,
+      "head": ""
+    },
+    {
+      "path": "/deepcoin/account/position",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/contract/position",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/contract/positions",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/config",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/setting",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/account/sub/list",
+      "status": 404,
+      "head": "Not Found"
+    },
+    {
+      "path": "/deepcoin/market/tickers",
+      "status": 200,
+      "head": ""
+    }
+  ],
+  "discovery": {
+    "pages": [
+      {
+        "page": "https://www.deepcoin.red/zh/my/dashboard",
+        "status": 200,
+        "bytes": 421122
+      },
+      {
+        "js": "atic/chunks/1dd3208c-fd8efb33297d7345.js",
+        "status": 200,
+        "k": 173220
+      },
+      {
+        "js": "atic/chunks/e3c40c1d-50162f820e74695c.js",
+        "status": 200,
+        "k": 973
+      },
+      {
+        "js": "t/static/chunks/8814-d43223a6d730c728.js",
+        "status": 200,
+        "k": 42712
+      },
+      {
+        "js": "t/static/chunks/4259-0ae5c2dcb454227f.js",
+        "status": 200,
+        "k": 191262
+      },
+      {
+        "js": "atic/chunks/main-app-49fdacbe0b6a6923.js",
+        "status": 200,
+        "k": 19362
+      },
+      {
+        "js": "atic/chunks/c3110d36-213c8e1cb528a1c7.js",
+        "status": 200,
+        "k": 165977
+      },
+      {
+        "js": "t/static/chunks/1135-2ea7f63460928967.js",
+        "status": 200,
+        "k": 262160
+      },
+      {
+        "js": "t/static/chunks/8890-9bfcad25f86094e5.js",
+        "status": 200,
+        "k": 397542
+      },
+      {
+        "page": "https://www.deepcoin.red/zh/my/balance",
+        "status": 404,
+        "bytes": 6189
+      },
+      {
+        "js": "atic/chunks/1dd3208c-fd8efb33297d7345.js",
+        "status": 200,
+        "k": 173220
+      },
+      {
+        "js": "atic/chunks/e3c40c1d-50162f820e74695c.js",
+        "status": 200,
+        "k": 973
+      },
+      {
+        "js": "t/static/chunks/8814-d43223a6d730c728.js",
+        "status": 200,
+        "k": 42712
+      },
+      {
+        "js": "t/static/chunks/4259-0ae5c2dcb454227f.js",
+        "status": 200,
+        "k": 191262
+      },
+      {
+        "js": "atic/chunks/main-app-49fdacbe0b6a6923.js",
+        "status": 200,
+        "k": 19362
+      },
+      {
+        "js": "nks/app/global-error-134b0aa8922212d5.js",
+        "status": 200,
+        "k": 6631
+      },
+      {
+        "js": "tic/chunks/polyfills-42372ed130431b0a.js",
+        "status": 200,
+        "k": 112541
+      },
+      {
+        "js": "tatic/chunks/webpack-549f5ea10a60f219.js",
+        "status": 200,
+        "k": 9579
+      },
+      {
+        "page": "https://www.deepcoin.red/",
+        "status": 200,
+        "bytes": 480253
+      },
+      {
+        "js": "atic/chunks/1dd3208c-fd8efb33297d7345.js",
+        "status": 200,
+        "k": 173220
+      },
+      {
+        "js": "atic/chunks/e3c40c1d-50162f820e74695c.js",
+        "status": 200,
+        "k": 973
+      },
+      {
+        "js": "t/static/chunks/8814-d43223a6d730c728.js",
+        "status": 200,
+        "k": 42712
+      },
+      {
+        "js": "t/static/chunks/4259-0ae5c2dcb454227f.js",
+        "status": 200,
+        "k": 191262
+      },
+      {
+        "js": "atic/chunks/main-app-49fdacbe0b6a6923.js",
+        "status": 200,
+        "k": 19362
+      },
+      {
+        "js": "atic/chunks/d86b74c0-ea1433a85383586d.js",
+        "status": 200,
+        "k": 53399
+      },
+      {
+        "js": "t/static/chunks/1135-2ea7f63460928967.js",
+        "status": 200,
+        "k": 262160
+      },
+      {
+        "js": "t/static/chunks/8890-9bfcad25f86094e5.js",
+        "status": 200,
+        "k": 397542
+      }
+    ],
+    "paths": []
+  }
 }
