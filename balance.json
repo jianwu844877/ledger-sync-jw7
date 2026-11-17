@@ -2,19 +2,30 @@
   "total": 0,
   "currency": "USD",
   "source": "deepcoin",
-  "updated_at": "2026-11-17T07:00:46.640Z",
+  "updated_at": "2026-11-17T07:05:09.270Z",
   "path_used": "/deepcoin/account/balances",
-  "attempts": [
-    {
-      "path": "/deepcoin/account/balance",
-      "status": 404,
-      "note": "Not Found"
-    },
-    {
-      "path": "/deepcoin/account/balances",
-      "status": 200,
-      "note": ""
+  "schema": {
+    "object": {
+      "code": {
+        "string": "0"
+      },
+      "msg": {
+        "string": ""
+      },
+      "data": {
+        "array": 1,
+        "item": {
+          "object": {
+            "ccy": "文本",
+            "bal": "数值字符串",
+            "frozenBal": "数值字符串",
+            "availBal": "数值字符串",
+            "unrealizedProfit": "数值字符串",
+            "equity": "数值字符串"
+          }
+        }
+      }
     }
-  ],
+  },
   "http_status": 200
 }
