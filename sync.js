@@ -1,8 +1,5 @@
-// Deepcoin 接口探查脚本 v5（在 GitHub Actions 里运行，只读，只报告状态，不写持仓明细）
-// 目的：
-//   1) 试探一批候选接口，看哪个返回 200（找"合约账户"余额接口）
-//   2) 抓交易所网页的 JS，把里面出现的 /deepcoin/... 接口路径提取出来
-// 输出：只写接口路径和状态码，不写任何金额明细
+// Deepcoin 探查 v6：找"合约账户权益"接口 + 看持仓/资金接口的字段结构
+// 只写字段名与路径，不写具体金额
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -16,25 +13,7 @@ function sign(ts, path) {
   return crypto.createHmac('sha256', SECRET).update(ts + 'GET' + path + '').digest('base64');
 }
 
-const PROBE = [
-  '/deepcoin/account/balances',
-  '/deepcoin/account/contract/balances',
-  '/deepcoin/account/futures/balances',
-  '/deepcoin/account/swap/balances',
-  '/deepcoin/account/asset',
-  '/deepcoin/account/assets',
-  '/deepcoin/account/info',
-  '/deepcoin/account/positions',
-  '/deepcoin/account/position',
-  '/deepcoin/account/contract/position',
-  '/deepcoin/account/contract/positions',
-  '/deepcoin/account/config',
-  '/deepcoin/account/setting',
-'/deepcoin/account/sub/list',
-  '/deepcoin/market/tickers',
-];
-
-async function probe(path) {
+async function call(path) {
   const ts = new Date().toISOString();
   const headers = {
     'DC-ACCESS-KEY': KEY,
@@ -46,67 +25,72 @@ async function probe(path) {
   try {
     const res = await fetch(BASE + path, { method: 'GET', headers });
     const text = await res.text();
-    return { path, status: res.status, head: res.status === 200 ? '' : text.slice(0, 60).replace(/\s+/g, ' ') };
+    let json = null;
+    try { json = JSON.parse(text); } catch (e) {}
+    return { path, status: res.status, json, head: res.status === 200 ? '' : text.slice(0, 60) };
   } catch (e) {
-    return { path, status: 0, head: '网络失败:' + e.message };
+return { path, status: 0, head: '网络失败:' + e.message };
   }
 }
 
+const NUM_RE = /^-?\d+(\.\d+)?$/;
+function schemaOf(v, depth) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return { array: v.length, item: depth < 2 && v.length ? schemaOf(v[0], depth + 1) : '(省略)' };
+  if (typeof v === 'object') {
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = schemaOf(v[k], depth + 1);
+    return { object: o };
+  }
+  if (typeof v === 'number') return 'number';
+  if (typeof v === 'string') return NUM_RE.test(v.trim()) ? '数值字符串' : '文本';
+  return typeof v;
+}
+
+// 从 JS / HTML 里扒可能的接口路径
 async function discover() {
-  const pages = [
-    'https://www.deepcoin.red/zh/my/dashboard',
-    'https://www.deepcoin.red/zh/my/balance',
-    'https://www.deepcoin.red/',
-  ];
-  const found = new Set();
-  const pageInfo = [];
+  const pages = ['https://www.deepcoin.red/zh/my/dashboard', 'https://www.deepcoin.red/'];
+  const hits = new Set();
+  const info = [];
 
   for (const page of pages) {
     let html = '';
     try {
       const r = await fetch(page, { headers: { 'user-agent': 'Mozilla/5.0' } });
-html = await r.text();
-      pageInfo.push({ page, status: r.status, bytes: html.length });
-    } catch (e) {
-      pageInfo.push({ page, status: 0, note: String(e.message).slice(0, 40) });
-      continue;
-    }
-    if (!html) continue;
+      html = await r.text();
+      info.push({ page, status: r.status, bytes: html.length });
+    } catch (e) { continue; }
+if (!html) continue;
 
-    for (const m of html.matchAll(/\/deepcoin\/[A-Za-z0-9_\-/]{2,60}/g)) found.add(m[0]);
+    // 页面里所有含 account / balance / equity / asset 的短字符串
+    for (const m of html.matchAll(/["'`](\/[a-zA-Z0-9_\-/{}.:]{4,70})["'`]/g)) {
+      if (/account|balance|asset|equity|position|wallet/i.test(m[1])) hits.add(m[1]);
+    }
+    // API 域名相关
+    for (const m of html.matchAll(/(https?:\/\/api\.deepcoin\.com[^"'`\s]{0,60})/g)) hits.add(m[1]);
 
     const srcs = new Set();
     for (const m of html.matchAll(/src=["']([^"']+\.js[^"']*)["']/g)) srcs.add(m[1]);
-    for (const m of html.matchAll(/href=["']([^"']+\.js[^"']*)["']/g)) srcs.add(m[1]);
-
     let n = 0;
     for (const s of srcs) {
-      if (n >= 8) break;
-      n++;
+      if (n >= 6) break; n++;
       const url = s.startsWith('http') ? s : new URL(s, page).toString();
       try {
         const jr = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
         const jt = await jr.text();
-        for (const m of jt.matchAll(/\/deepcoin\/[A-Za-z0-9_\-/]{2,60}/g)) found.add(m[0]);
-        pageInfo.push({ js: url.slice(-40), status: jr.status, k: jt.length });
-      } catch (e) {
-pageInfo.push({ js: url.slice(-40), status: 0 });
-      }
+        for (const m of jt.matchAll(/["'`](\/[a-zA-Z0-9_\-/{}.:]{4,70})["'`]/g)) {
+          if (/account|balance|asset|equity|position|wallet/i.test(m[1])) hits.add(m[1]);
+        }
+        // 形如 account/xxx 的无前缀片段
+        for (const m of jt.matchAll(/["'`](account\/[a-zA-Z0-9_\-/]{2,50})["'`]/g)) hits.add(m[1]);
+} catch (e) {}
     }
   }
-
-  return { pages: pageInfo, paths: Array.from(found).slice(0, 80) };
+  return { info, hits: Array.from(hits).slice(0, 120) };
 }
 
 async function main() {
-  const out = {
-    total: null,
-    currency: 'USD',
-    source: 'deepcoin',
-    updated_at: new Date().toISOString(),
-    step: 'probe',
-    probed: [],
-  };
+  const out = { total: null, currency: 'USD', updated_at: new Date().toISOString(), step: 'v6' };
 
   if (!KEY || !SECRET) {
     out.error = '缺少 DC_KEY 或 DC_SECRET';
@@ -114,20 +98,16 @@ async function main() {
     return;
   }
 
-  for (const p of PROBE) {
-    const r = await probe(p);
-    out.probed.push(r);
-    console.log(p, '->', r.status);
-  }
+  const b = await call('/deepcoin/account/balances');
+  out.balances = { status: b.status, schema: b.json ? schemaOf(b.json, 0) : b.head };
 
-  try {
-    out.discovery = await discover();
-  } catch (e) {
-    out.discovery = { error: String(e.message).slice(0, 80) };
-  }
+  const p = await call('/deepcoin/account/positions');
+  out.positions = { status: p.status, schema: p.json ? schemaOf(p.json, 0) : p.head };
+
+  try { out.discovery = await discover(); } catch (e) { out.discovery = { error: String(e.message).slice(0, 60) }; }
 
   fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
-  console.log('已写入 balance.json');
+  console.log('ok');
 }
 
 main().catch((e) => {
