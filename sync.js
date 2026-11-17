@@ -1,6 +1,7 @@
-// Deepcoin 余额读取脚本 v3（在 GitHub Actions 里运行）
-// 已确认正确路径：/deepcoin/account/balances（返回 200）
-// v3：读取接口的数据结构（只记录字段名与类型，不记录每个币种的具体数量），据此确定总资产字段
+// Deepcoin 余额读取脚本 v4（在 GitHub Actions 里运行）—— 定稿版
+// 接口：GET https://api.deepcoin.com/deepcoin/account/balances（已实测 200）
+// 返回结构：{ code, msg, data: [ { ccy, bal, frozenBal, availBal, unrealizedProfit, equity } ] }
+// 总资产口径：各币种 equity（按 USD 折算）求和；若 equity 全为 0，则退回用 bal 求和
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -15,27 +16,11 @@ function sign(secret, ts, path) {
   return crypto.createHmac('sha256', secret).update(ts + 'GET' + path + '').digest('base64');
 }
 
-const NUM_RE = /^-?\d+(\.\d+)?$/;
-
-// 只描述结构：字段名 + 类型；深层（数组元素内部）不输出具体数值，避免公开持仓
-function schemaOf(v, depth) {
-  if (v === null) return 'null';
-  if (Array.isArray(v)) {
-    return { array: v.length, item: depth < 2 && v.length ? schemaOf(v[0], depth + 1) : '(省略)' };
-  }
-  if (typeof v === 'object') {
-    const keys = {};
-    for (const k of Object.keys(v)) keys[k] = schemaOf(v[k], depth + 1);
-    return { object: keys };
-  }
-  if (typeof v === 'number') return depth <= 1 ? { number: v } : 'number';
-if (typeof v === 'string') {
-    const isNum = NUM_RE.test(v.trim());
-    if (depth <= 1) return { string: v.slice(0, 20) };
-    return isNum ? '数值字符串' : '文本';
-  }
-  return typeof v;
-}
+const toNum = (v) => {
+  if (v == null) return null;
+  const n = Number(String(v).trim());
+  return Number.isFinite(n) ? n : null;
+};
 
 async function main() {
   const out = {
@@ -44,10 +29,8 @@ async function main() {
     source: 'deepcoin',
     updated_at: new Date().toISOString(),
     path_used: PATH,
-    schema: null,
   };
-
-  if (!KEY || !SECRET) {
+if (!KEY || !SECRET) {
     out.error = '缺少 DC_KEY 或 DC_SECRET';
     fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
     console.log(out.error);
@@ -70,7 +53,7 @@ async function main() {
     text = await res.text();
   } catch (e) {
     out.error = '网络失败:' + e.message;
-fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
+    fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
     console.log(out.error);
     return;
   }
@@ -79,38 +62,34 @@ fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
   console.log('HTTP', status);
 
   let json = null;
-  try { json = JSON.parse(text); } catch (e) { out.error = '返回不是 JSON'; }
+  try { json = JSON.parse(text); } catch (e) {
+    out.error = '返回不是 JSON';
+  }
 
   if (json) {
-    out.schema = schemaOf(json, 0);
-  }
-
-  // 尝试在常见位置取总资产（数值或数值字符串都接受）
-  const EQ = ['totalEq', 'totalEquity', 'totalUsd', 'usdValue', 'totalBalanceValue',
-              'netEquity', 'totalAsset', 'totalBalance', 'equity', 'eq'];
-  function grab(o, keys) {
-    if (!o || typeof o !== 'object') return null;
-    for (const k of keys) {
-      const v = o[k];
-      if (v != null && NUM_RE.test(String(v).trim())) return Number(v);
+    if (String(json.code) !== '0' && json.code != null) {
+out.error = '交易所返回错误码 ' + json.code + ' ' + (json.msg || '');
     }
-    return null;
-  }
+    const list = Array.isArray(json.data) ? json.data : (json.data ? [json.data] : []);
 
-  const data = json && typeof json === 'object' && 'data' in json ? json.data : json;
-  let total = grab(data, EQ);
-  if (total == null && Array.isArray(data)) {
-    let sum = 0, hit = false;
-    for (const it of data) {
-      const v = grab(it, EQ);
-      if (v != null) { sum += v; hit = true; }
+    let byEquity = 0, byBal = 0, hit = false;
+    for (const it of list) {
+      if (!it || typeof it !== 'object') continue;
+      const eq = toNum(it.equity);
+      const bal = toNum(it.bal);
+      if (eq != null) { byEquity += eq; hit = true; }
+      if (bal != null) byBal += bal;
     }
-    if (hit) total = sum;
+    if (hit) {
+      out.total = Math.round((byEquity > 0 ? byEquity : byBal) * 100) / 100;
+      out.coin_count = list.length;
+    } else {
+      out.error = out.error || '未识别出余额字段';
+    }
   }
-  if (total != null) out.total = Math.round(total * 100) / 100;
 
   fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
-  console.log('已写入 balance.json');
+  console.log('总资产：', out.total, out.error ? ('/ ' + out.error) : '');
 }
 
 main().catch((e) => {
