@@ -1,7 +1,6 @@
-// Deepcoin 余额同步（正式版）
-// 读合约账户权益（含浮动盈亏），写入 balance.json
-// 接口：GET /deepcoin/account/balances?instType=SWAP
-// 字段：equity = 权益（含浮盈浮亏），bal = 钱包余额（不含浮盈亏）
+// Deepcoin 余额同步（正式版 · 加密输出）
+// 读合约账户权益（含浮动盈亏），加密后写入 balance.json
+// 仓库即使公开，也只能看到一串密文，看不到任何金额
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -10,6 +9,7 @@ const BASE = (process.env.DC_BASE || 'https://api.deepcoin.com').replace(/\/+$/,
 const KEY = process.env.DC_KEY;
 const SECRET = process.env.DC_SECRET;
 const PASS = process.env.DC_PASS;
+const ENC_KEY = process.env.ENC_KEY || '';
 
 function sign(ts, path) {
   return crypto.createHmac('sha256', SECRET).update(ts + 'GET' + path + '').digest('base64');
@@ -32,8 +32,8 @@ async function get(path) {
   };
   try {
     const res = await fetch(BASE + path, { method: 'GET', headers });
-const text = await res.text();
-    let json = null;
+    const text = await res.text();
+let json = null;
     try { json = JSON.parse(text); } catch (e) {}
     return { status: res.status, json, raw: text };
   } catch (e) {
@@ -49,12 +49,23 @@ function listOf(json) {
   return [];
 }
 
-async function main() {
-  const out = { total: 0, currency: 'USD', source: 'deepcoin', updated_at: new Date().toISOString() };
+// AES-256-GCM 加密：输出 iv(12) + tag(16) + 密文 的 base64
+function encrypt(obj, pass) {
+  const key = crypto.createHash('sha256').update(String(pass), 'utf8').digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const plain = Buffer.from(JSON.stringify(obj), 'utf8');
+  const enc = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString('base64');
+}
 
-  if (!KEY || !SECRET) {
-    out.error = '缺少 DC_KEY 或 DC_SECRET';
-    fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
+async function main() {
+  const updatedAt = new Date().toISOString();
+  const payload = { total: 0, currency: 'USD', source: 'deepcoin', updated_at: updatedAt };
+if (!KEY || !SECRET || !ENC_KEY) {
+    const err = Object.assign({}, payload, { error: '缺少密钥：DC_KEY / DC_SECRET / ENC_KEY' });
+    fs.writeFileSync('balance.json', JSON.stringify({ v: 1, enc: encrypt(err, ENC_KEY || 'none') }, null, 2) + '\n');
     process.exit(0);
   }
 
@@ -78,14 +89,15 @@ async function main() {
   }
 
   const total = (hasEquity ? equitySum : balSum) + fundEquity;
-  out.total = Math.round(total * 100) / 100;
-  if (swap.status !== 200) out.warning = '合约接口返回 ' + swap.status;
+  payload.total = Math.round(total * 100) / 100;
 
-  fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n');
-  console.log('total', out.total);
+  fs.writeFileSync('balance.json', JSON.stringify({ v: 1, enc: encrypt(payload, ENC_KEY) }, null, 2) + '\n');
+  console.log('已加密写入，长度', String(encrypt(payload, ENC_KEY)).length);
 }
 
 main().catch((e) => {
-  const out = { total: 0, error: String(e && e.message ? e.message : e), updated_at: new Date().toISOString() };
-  try { fs.writeFileSync('balance.json', JSON.stringify(out, null, 2) + '\n'); } catch (_) {}
+  try {
+    const err = { total: 0, error: String(e && e.message ? e.message : e), updated_at: new Date().toISOString() };
+    fs.writeFileSync('balance.json', JSON.stringify({ v: 1, enc: encrypt(err, process.env.ENC_KEY || 'none') }, null, 2) + '\n');
+  } catch (_) {}
 });
