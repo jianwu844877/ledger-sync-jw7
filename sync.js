@@ -1,40 +1,122 @@
-name: sync-balance
+// Deepcoin 余额同步（稳健版）
+// 输出两个口径：
+//   total  = 合约权益（含浮动盈亏）+ 资金账户 → 首页「总资产」
+//   wallet = 合约钱包余额（不含浮动盈亏）+ 资金账户 → 「钱包余额」
+// 重要原则：任何异常都不写 balance.json，直接退出（失败即止，绝不覆盖上一次成功的数据）
 
-on:
-  schedule:
-    - cron: "0 */2 * * *"
-  workflow_dispatch:
+const crypto = require('crypto');
+const fs = require('fs');
 
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
+const BASE = (process.env.DC_BASE || 'https://api.deepcoin.com').replace(/\/+$/, '');
+const KEY = process.env.DC_KEY;
+const SECRET = process.env.DC_SECRET;
+const PASS = process.env.DC_PASS;
+const ENC_KEY = (process.env.ENC_KEY || '').trim();
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+function sign(ts, path) {
+  return crypto.createHmac('sha256', SECRET).update(ts + 'GET' + path + '').digest('base64');
+}
 
-      - name: 生成余额脚本
-        run: echo 'Ly8gRGVlcGNvaW4g5L2Z6aKd5ZCM5q2l77yI5q2j5byP54mIIMK3IOWKoOWvhui+k+WHuu+8iQovLyDor7vlkIjnuqbotKbmiLfmnYPnm4rvvIjlkKvmta7liqjnm4jkuo/vvInvvIzliqDlr4blkI7lhpnlhaUgYmFsYW5jZS5qc29uCi8vIOS7k+W6k+WNs+S9v+WFrOW8gO+8jOS5n+WPquiDveeci+WIsOS4gOS4suWvhuaWh++8jOeci+S4jeWIsOS7u+S9lemHkeminQoKY29uc3QgY3J5cHRvID0gcmVxdWlyZSgnY3J5cHRvJyk7CmNvbnN0IGZzID0gcmVxdWlyZSgnZnMnKTsKCmNvbnN0IEJBU0UgPSAocHJvY2Vzcy5lbnYuRENfQkFTRSB8fCAnaHR0cHM6Ly9hcGkuZGVlcGNvaW4uY29tJykucmVwbGFjZSgvXC8rJC8sICcnKTsKY29uc3QgS0VZID0gcHJvY2Vzcy5lbnYuRENfS0VZOwpjb25zdCBTRUNSRVQgPSBwcm9jZXNzLmVudi5EQ19TRUNSRVQ7CmNvbnN0IFBBU1MgPSBwcm9jZXNzLmVudi5EQ19QQVNTOwpjb25zdCBFTkNfS0VZID0gcHJvY2Vzcy5lbnYuRU5DX0tFWSB8fCAnJzsKCmZ1bmN0aW9uIHNpZ24odHMsIHBhdGgpIHsKICByZXR1cm4gY3J5cHRvLmNyZWF0ZUhtYWMoJ3NoYTI1NicsIFNFQ1JFVCkudXBkYXRlKHRzICsgJ0dFVCcgKyBwYXRoICsgJycpLmRpZ2VzdCgnYmFzZTY0Jyk7Cn0KCmNvbnN0IHRvTnVtID0gKHYpID0+IHsKICBpZiAodiA9PSBudWxsKSByZXR1cm4gbnVsbDsKICBjb25zdCBuID0gTnVtYmVyKFN0cmluZyh2KS50cmltKCkpOwogIHJldHVybiBOdW1iZXIuaXNGaW5pdGUobikgPyBuIDogbnVsbDsKfTsKCmFzeW5jIGZ1bmN0aW9uIGdldChwYXRoKSB7CiAgY29uc3QgdHMgPSBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCk7CiAgY29uc3QgaGVhZGVycyA9IHsKICAgICdEQy1BQ0NFU1MtS0VZJzogS0VZLAogICAgJ0RDLUFDQ0VTUy1TSUdOJzogc2lnbih0cywgcGF0aCksCiAgICAnREMtQUNDRVNTLVRJTUVTVEFNUCc6IHRzLAogICAgJ0RDLUFDQ0VTUy1QQVNTUEhSQVNFJzogUEFTUyB8fCAnJywKICAgICdDb250ZW50LVR5cGUnOiAnYXBwbGljYXRpb24vanNvbicsCiAgfTsKICB0cnkgewogICAgY29uc3QgcmVzID0gYXdhaXQgZmV0Y2goQkFTRSArIHBhdGgsIHsgbWV0aG9kOiAnR0VUJywgaGVhZGVycyB9KTsKICAgIGNvbnN0IHRleHQgPSBhd2FpdCByZXMudGV4dCgpOwogICAgbGV0IGpzb24gPSBudWxsOwogICAgdHJ5IHsganNvbiA9IEpTT04ucGFyc2UodGV4dCk7IH0gY2F0Y2ggKGUpIHt9CiAgICByZXR1cm4geyBzdGF0dXM6IHJlcy5zdGF0dXMsIGpzb24sIHJ
-hdzogdGV4dCB9OwogIH0gY2F0Y2ggKGUpIHsKICAgIHJldHVybiB7IHN0YXR1czogMCwganNvbjogbnVsbCwgcmF3OiAn572R57uc5aSx6LSlOicgKyBTdHJpbmcoZSAmJiBlLm1lc3NhZ2UpIH07CiAgfQp9CgpmdW5jdGlvbiBsaXN0T2YoanNvbikgewogIGlmICghanNvbikgcmV0dXJuIFtdOwogIGNvbnN0IGQgPSBqc29uLmRhdGE7CiAgaWYgKEFycmF5LmlzQXJyYXkoZCkpIHJldHVybiBkOwogIGlmIChkICYmIHR5cGVvZiBkID09PSAnb2JqZWN0JykgcmV0dXJuIFtkXTsKICByZXR1cm4gW107Cn0KCi8vIEFFUy0yNTYtR0NNIOWKoOWvhu+8mui+k+WHuiBpdigxMikgKyB0YWcoMTYpICsg5a+G5paHIOeahCBiYXNlNjQKZnVuY3Rpb24gZW5jcnlwdChvYmosIHBhc3MpIHsKICBjb25zdCBrZXkgPSBjcnlwdG8uY3JlYXRlSGFzaCgnc2hhMjU2JykudXBkYXRlKFN0cmluZyhwYXNzKSwgJ3V0ZjgnKS5kaWdlc3QoKTsKICBjb25zdCBpdiA9IGNyeXB0by5yYW5kb21CeXRlcygxMik7CiAgY29uc3QgY2lwaGVyID0gY3J5cHRvLmNyZWF0ZUNpcGhlcml2KCdhZXMtMjU2LWdjbScsIGtleSwgaXYpOwogIGNvbnN0IHBsYWluID0gQnVmZmVyLmZyb20oSlNPTi5zdHJpbmdpZnkob2JqKSwgJ3V0ZjgnKTsKICBjb25zdCBlbmMgPSBCdWZmZXIuY29uY2F0KFtjaXBoZXIudXBkYXRlKHBsYWluKSwgY2lwaGVyLmZpbmFsKCldKTsKICBjb25zdCB0YWcgPSBjaXBoZXIuZ2V0QXV0aFRhZygpOwogIHJldHVybiBCdWZmZXIuY29uY2F0KFtpdiwgdGFnLCBlbmNdKS50b1N0cmluZygnYmFzZTY0Jyk7Cn0KCmFzeW5jIGZ1bmN0aW9uIG1haW4oKSB7CiAgY29uc3QgdXBkYXRlZEF0ID0gbmV3IERhdGUoKS50b0lTT1N0cmluZygpOwogIGNvbnN0IHBheWxvYWQgPSB7IHRvdGFsOiAwLCBjdXJyZW5jeTogJ1VTRCcsIHNvdXJjZTogJ2RlZXBjb2luJywgdXBkYXRlZF9hdDogdXBkYXRlZEF0IH07CgogIGlmICghS0VZIHx8ICFTRUNSRVQgfHwgIUVOQ19LRVkpIHsKICAgIGNvbnN0IGVyciA9IE9iamVjdC5hc3NpZ24oe30sIHBheWxvYWQsIHsgZXJyb3I6ICfnvLrlsJHlr4bpkqXvvJpEQ19LRVkgLyBEQ19TRUNSRVQgLyBFTkNfS0VZJyB9KTsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2JhbGFuY2UuanNvbicsIEpTT04uc3RyaW5naWZ5KHsgdjogMSwgZW5jOiBlbmNyeXB0KGVyciwgRU5DX0tFWSB8fCAnbm9uZScpIH0sIG51bGwsIDIpICsgJ1xuJyk7CiAgICBwcm9jZXNzLmV4aXQoMCk7CiAgfQoKICAvLyDlkIjnuqbotKbmiLfvvJrmnYPnm4rvvIjlkKvmta7liqjnm4jkuo/vvIkKICBjb25zdCBzd2FwID0gYXdhaXQgZ2V0KCcvZGVlcGNvaW4vYWNjb3VudC9iYWxhbmNlcz9pbnN0VHlwZT1TV0FQJyk7CiAgY29uc3Qgc3dhcExpc3QgPSBsaXN0T2Yoc3dhcC5qc29uKTsKICBsZXQgZXF1aXR5U3VtID0gMCwgYmFsU3VtID0gMCwgaGFzRXF1aXR5ID0gZmFsc2U7CiAgZm9yIChjb25zdCBpdCBvZiBzd2FwTGlzdCkgewogICAgY29uc3QgZXEgPSB0b051bShpdC5l
-cXVpdHkpOwogICAgY29uc3QgYmFsID0gdG9OdW0oaXQuYmFsKTsKICAgIGlmIChlcSAhPSBudWxsKSB7IGVxdWl0eVN1bSArPSBlcTsgaGFzRXF1aXR5ID0gdHJ1ZTsgfQogICAgaWYgKGJhbCAhPSBudWxsKSBiYWxTdW0gKz0gYmFsOwogIH0KCiAgLy8g6LWE6YeR6LSm5oi377ya5LiA5bm26K6h5YWlCiAgY29uc3QgZnVuZCA9IGF3YWl0IGdldCgnL2RlZXBjb2luL2FjY291bnQvYmFsYW5jZXMnKTsKICBsZXQgZnVuZEVxdWl0eSA9IDA7CiAgZm9yIChjb25zdCBpdCBvZiBsaXN0T2YoZnVuZC5qc29uKSkgewogICAgY29uc3QgZXEgPSB0b051bShpdC5lcXVpdHkpOwogICAgaWYgKGVxICE9IG51bGwpIGZ1bmRFcXVpdHkgKz0gZXE7CiAgfQoKICBjb25zdCB0b3RhbCA9IChoYXNFcXVpdHkgPyBlcXVpdHlTdW0gOiBiYWxTdW0pICsgZnVuZEVxdWl0eTsKICBwYXlsb2FkLnRvdGFsID0gTWF0aC5yb3VuZCh0b3RhbCAqIDEwMCkgLyAxMDA7CgogIGZzLndyaXRlRmlsZVN5bmMoJ2JhbGFuY2UuanNvbicsIEpTT04uc3RyaW5naWZ5KHsgdjogMSwgZW5jOiBlbmNyeXB0KHBheWxvYWQsIEVOQ19LRVkpIH0sIG51bGwsIDIpICsgJ1xuJyk7CiAgY29uc29sZS5sb2coJ+W3suWKoOWvhuWGmeWFpe+8jOmVv+W6picsIFN0cmluZyhlbmNyeXB0KHBheWxvYWQsIEVOQ19LRVkpKS5sZW5ndGgpOwp9CgptYWluKCkuY2F0Y2goKGUpID0+IHsKICB0cnkgewogICAgY29uc3QgZXJyID0geyB0b3RhbDogMCwgZXJyb3I6IFN0cmluZyhlICYmIGUubWVzc2FnZSA/IGUubWVzc2FnZSA6IGUpLCB1cGRhdGVkX2F0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkgfTsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2JhbGFuY2UuanNvbicsIEpTT04uc3RyaW5naWZ5KHsgdjogMSwgZW5jOiBlbmNyeXB0KGVyciwgcHJvY2Vzcy5lbnYuRU5DX0tFWSB8fCAnbm9uZScpIH0sIG51bGwsIDIpICsgJ1xuJyk7CiAgfSBjYXRjaCAoXykge30KfSk7Cg==' | base64 -d > sync.js
+const toNum = (v) => {
+  if (v == null) return null;
+  const n = Number(String(v).trim());
+  return Number.isFinite(n) ? n : null;
+};
 
-      - name: 读取余额
-        env:
-          DC_KEY: ${{ secrets.DC_KEY }}
-          DC_SECRET: ${{ secrets.DC_SECRET }}
-          DC_PASS: ${{ secrets.DC_PASS }}
-          ENC_KEY: ${{ secrets.ENC_KEY }}
-          DC_BASE: https://api.deepcoin.com
-        run: node sync.js
+async function get(path) {
+  const ts = new Date().toISOString();
+  const headers = {
+    'DC-ACCESS-KEY': KEY,
+    'DC-ACCESS-SIGN': sign(ts, path),
+    'DC-ACCESS-TIMESTAMP': ts,
+    'DC-ACCESS-PASSPHRASE': PASS || '',
+    'Content-Type': 'application/json',
+  };
+  const res = await fetch(BASE + path, { method: 'GET', headers });
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch (e) {}
+  return { status: res.status, json, raw: text };
+}
 
-      - name: 提交 balance.json
-        run: |
-          git config user.name "balance-bot"
-          git config user.email "balance-bot@users.noreply.github.com"
-          git add balance.json
-          git commit -m "update balance $(date -u +%Y-%m-%dT%H:%M:%SZ)" || echo "no change"
-          git push
+function listOf(json) {
+  if (!json) return [];
+  const d = json.data;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === 'object') return [d];
+  return [];
+}
+
+// AES-256-GCM：iv(12) + tag(16) + 密文 的 base64
+function encrypt(obj, pass) {
+  const key = crypto.createHash('sha256').update(String(pass), 'utf8').digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const plain = Buffer.from(JSON.stringify(obj), 'utf8');
+  const enc = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString('base64');
+}
+
+async function main() {
+  // 1) 密钥缺失 → 直接失败，不写文件
+  if (!KEY || !SECRET || !ENC_KEY) {
+    console.error('缺少密钥：DC_KEY / DC_SECRET / ENC_KEY');
+    process.exit(1);
+  }
+
+  // 2) 合约账户
+  const swap = await get('/deepcoin/account/balances?instType=SWAP');
+  if (swap.status !== 200) {
+    console.error('合约接口失败，status=' + swap.status + ' raw=' + String(swap.raw).slice(0, 200));
+    process.exit(1);
+  }
+  let equitySum = 0, balSum = 0, hasEquity = false;
+  for (const it of listOf(swap.json)) {
+    const eq = toNum(it.equity);
+    const bal = toNum(it.bal);
+    if (eq != null) { equitySum += eq; hasEquity = true; }
+    if (bal != null) balSum += bal;
+  }
+
+  // 3) 资金账户（现货零头）
+  const fund = await get('/deepcoin/account/balances');
+  if (fund.status !== 200) {
+    console.error('资金接口失败，status=' + fund.status + ' raw=' + String(fund.raw).slice(0, 200));
+    process.exit(1);
+  }
+  let fundEquity = 0, fundBal = 0;
+  for (const it of listOf(fund.json)) {
+    const eq = toNum(it.equity);
+    const bal = toNum(it.bal);
+    if (eq != null) fundEquity += eq;
+    if (bal != null) fundBal += bal;
+  }
+
+  const equity = hasEquity ? equitySum : balSum;
+  const total = Math.round((equity + fundEquity) * 100) / 100;
+  const wallet = Math.round((balSum + fundBal) * 100) / 100;
+
+  // 4) 合理性校验：为 0 或负数一律视为异常，不覆盖上一次成功数据
+  if (!(total > 0) || !(wallet >= 0)) {
+    console.error('金额异常，拒绝写入：total=' + total + ' wallet=' + wallet);
+    process.exit(1);
+  }
+
+  const payload = {
+    total,
+    wallet,
+    currency: 'USD',
+    source: 'deepcoin',
+    updated_at: new Date().toISOString(),
+  };
+
+  fs.writeFileSync('balance.json', JSON.stringify({ v: 2, enc: encrypt(payload, ENC_KEY) }, null, 2) + '\n');
+  console.log('ok total=' + total + ' wallet=' + wallet);
+}
+
+main().catch((e) => {
+  // 失败即止：不写 balance.json，让 workflow 以失败收场（GitHub 会发失败通知）
+  console.error('同步失败：' + String(e && e.stack ? e.stack : e));
+  process.exit(1);
+});
